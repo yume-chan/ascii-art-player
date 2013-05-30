@@ -11,7 +11,7 @@ html, body, pre {
 #output {
     font-size: 6px;
     line-height: 6px;
-    font: 6px "Courier New";
+    font: 6px "Courier New" !important;
 }
 
 #video {
