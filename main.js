@@ -1,12 +1,14 @@
 /// <reference path="index.html" />
 
+"use strict";
+
 /*
 var canvas = document.createElement("canvas");
 canvas.width = 7;
 canvas.height = 10;
 document.body.appendChild(canvas);
 var context = canvas.getContext("2d");
-context.font = '6px "Courier New"';
+context.font = '5px "Courier New"';
 context.textBaseline = "top";
 
 var bigCanvas = document.createElement("canvas");
@@ -39,55 +41,60 @@ var video = document.getElementById("video");
 var canvas = document.createElement("canvas");
 var context = canvas.getContext("2d");
 
-var width = innerWidth, height = innerHeight;
+var width, height;
+var blockWidth = 3, blockHeight = 6;
 
-video.width = width;
-video.height = height;
+var rowCount, columnCount, skipCount;
 
-canvas.width = innerWidth;
-canvas.height = innerHeight;
-
-addEventListener("resize", function () {
+function resize() {
     width = innerWidth, height = innerHeight;
 
     video.width = width;
     video.height = height;
 
-    canvas.width = innerWidth;
-    canvas.height = innerHeight;
-});
+    canvas.width = width;
+    canvas.height = height;
 
-var chars = "QK9DUul]+)~:,`. ";
+    rowCount = Math.floor(height / blockHeight);
+    columnCount = Math.floor(width / blockWidth);
+    skipCount = (width * (blockHeight - 1) + width % blockWidth) * 4;
+}
+resize();
+addEventListener("resize", resize);
 
-var paintedFrames = 0;
+var chars;
+
+var use6px = false;
+if (use6px)
+    chars = "QK9DUul]+)~:,`. ";
+else
+    chars = "BHW82ewl+{=;:`. ";
 
 var output = document.getElementById("output");
+var imageData, index, text;
 function convertFrame() {
     context.drawImage(video, 0, 0, width, height);
 
-    var imageData = context.getImageData(0, 0, width, height).data;
-    var index = 0, text = "";
-    var columnCount = Math.ceil(width / 4),
-        skipCount = (width * 5 - (4 - width % 4)) * 4;
-    for (var y = Math.floor(height / 6) ; y--;) {
-        for (var x = columnCount; x--;) {
+    imageData = context.getImageData(0, 0, width, height).data;
+    index = 0;
+    text = "";
+    for (var y = rowCount; y--;) {
+        for (var x = columnCount ; x--;) {
             // var gray = 299 * imageData[index] + 578 * imageData[index + 1] + 114 * imageData[index + 2];
             // text += chars[parseInt(gray / 1000 / 16)];
-
-            var gray = (imageData[index] + imageData[index + 1] * 2 + imageData[index + 2]) >> 2;
-            text += chars[gray >> 4];
-
-            index += 4 * 4;
+            text += chars[(imageData[index] + imageData[index + 1] * 2 + imageData[index + 2]) >> 6];
+            index += blockWidth * 4;
         }
         text += "\n";
         index += skipCount;
     }
-    output.innerHTML = text;
+    output.textContent = text;
 
     paintedFrames++;
     requestAnimationFrame(convertFrame);
 }
 
+var paintedFrames = 0;
 var fps = document.getElementById("fps");
 setInterval(function () {
     fps.value = paintedFrames;

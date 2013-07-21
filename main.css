@@ -9,9 +9,8 @@ html, body, pre {
 }
 
 #output {
-    font-size: 6px;
-    line-height: 6px;
-    font: 6px "Courier New" !important;
+    line-height: 5px;
+    font: 5px "Courier New" !important;
 }
 
 #video {
