@@ -9,11 +9,10 @@ html, body, pre {
 }
 
 #output {
-    font-size: 6px;
-    line-height: 6px;
-    font: 6px "Courier New";
+    letter-spacing: 0;
+    line-height: 1;
 }
 
 #video {
-    display: none;
+    /* display: none; */
 }
