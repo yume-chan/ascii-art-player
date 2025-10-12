@@ -4,15 +4,23 @@ html, body, pre {
     margin: 0;
 }
 
+.controls {
+    display: flex;
+    align-items: center;
+    column-gap: 8px;
+}
+
 #file {
     display: none;
 }
 
 #output {
-    letter-spacing: 0;
     line-height: 1;
+    font-variant-ligatures: none;
 }
 
 #video {
+    max-width: 100vw;
+    max-height: 100vh;
     /* display: none; */
 }
