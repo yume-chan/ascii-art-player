@@ -7,17 +7,29 @@
  * @param {number} index
  */
 function toGrayscale(pixels, index) {
-    // return 299 * imageData[index] + 578 * imageData[index + 1] + 114 * imageData[index + 2] / 1000;
+    const r = pixels[index] / 255;
+    const g = pixels[index + 1] / 255;
+    const b = pixels[index + 2] / 255;
 
     // use a fast algorithm for now
-    return (pixels[index] + pixels[index + 1] * 2 + pixels[index + 2]) / 4 / 255;
+    // const value = (r + g * 2 + b) / 4 / 255;
+    const value = 0.299 * r + 0.578 * g + 0.114 * b;
+
+    return 1 - value;
 }
 
 var chars =
     " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
 
 const fontFamily = "monospace";
-const fontSize = 10;
+const fontSize = 6;
+
+var output = /** @type {HTMLPreElement} */ (document.getElementById("output"));
+output.style.fontFamily = fontFamily;
+output.style.fontSize = `${fontSize}px`;
+output.addEventListener("click", () => {
+    output.scrollIntoView();
+});
 
 /**
  *
@@ -49,10 +61,16 @@ function createCharMap() {
     let maxWidth = 0;
     for (const char of chars) {
         const metrics = context.measureText(char);
-        console.log('metrics', char, metrics);
+        console.log("metrics", char, metrics);
         maxWidth = Math.max(maxWidth, metrics.width);
     }
+
+    const letterSpacing = 1 - (maxWidth % 1);
+    output.style.letterSpacing = `${letterSpacing}px`;
+
     maxWidth = Math.ceil(maxWidth);
+
+    let sumMax = 0;
 
     /** @type {CharMapEntry} */
     const charMap = [];
@@ -63,18 +81,25 @@ function createCharMap() {
         context.fillStyle = "black";
         context.fillText(chars[i], maxWidth / 2, canvas.height / 2);
 
-        var imageData = context.getImageData(
-            0,
-            0,
-            maxWidth,
-            canvas.height
-        ).data;
+        var imageData = context.getImageData(0, 0, maxWidth, canvas.height).data;
         var pixels = new Float32Array(imageData.length / 4);
+        let sum = 0;
         for (var j = 0; j < imageData.length; j += 4) {
-            pixels[j / 4] = toGrayscale(imageData, j);
+            var grayscale = toGrayscale(imageData, j);
+            pixels[j / 4] = grayscale;
+            sum += grayscale;
         }
 
+        sumMax = Math.max(sumMax, sum);
+
         charMap.push({ char: chars[i], pixels: pixels });
+    }
+
+    const normalizeFactor = (maxWidth * canvas.height) / sumMax;
+    for (const char of charMap) {
+        for (let i = 0; i < char.pixels.length; i++) {
+            char.pixels[i] *= normalizeFactor;
+        }
     }
 
     document.body.removeChild(canvas);
@@ -89,7 +114,7 @@ const charMap = createCharMap();
 console.log(charMap);
 
 var video = /** @type {HTMLVideoElement} */ (document.getElementById("video"));
-video.addEventListener('resize', handleResize)
+video.addEventListener("resize", handleResize);
 
 var width = 0,
     height = 0;
@@ -103,12 +128,12 @@ function handleResize() {
     height = innerHeight;
 
     if (width / height > video.videoWidth / video.videoHeight) {
-        width = height * video.videoWidth / video.videoHeight;
+        width = (height * video.videoWidth) / video.videoHeight;
     } else {
-        height = width * video.videoHeight / video.videoWidth;
+        height = (width * video.videoHeight) / video.videoWidth;
     }
 
-    console.log('resize', width, height);
+    console.log("resize", width, height);
 }
 
 addEventListener("resize", handleResize);
@@ -137,10 +162,6 @@ let sampler;
 
 var paintedFrames = 0;
 
-var output = /** @type {HTMLPreElement} */ (document.getElementById("output"));
-output.style.fontFamily = fontFamily;
-output.style.fontSize = `${fontSize}px`;
-
 async function convertFrame() {
     const rows = Math.floor(height / charMap.height);
     const columns = Math.floor(width / charMap.width);
@@ -166,11 +187,7 @@ async function convertFrame() {
     uniformData[5] = parseFloat(exposure.value);
     uniformData[6] = parseFloat(gamma.value);
 
-    device.queue.writeBuffer(
-        uniformBuffer,
-        0,
-        uniformData.buffer
-    );
+    device.queue.writeBuffer(uniformBuffer, 0, uniformData.buffer);
 
     const bindGroup = device.createBindGroup({
         layout: pipeline.getBindGroupLayout(0),
@@ -225,15 +242,21 @@ setInterval(function () {
     paintedFrames = 0;
 }, 1000);
 
-var exposure = /** @type {HTMLInputElement} */ (document.getElementById("exposure"));
+var exposure = /** @type {HTMLInputElement} */ (
+    document.getElementById("exposure")
+);
 var gamma = /** @type {HTMLInputElement} */ (document.getElementById("gamma"));
 
-var exposureValue = /** @type {HTMLSpanElement} */ (document.getElementById("exposure-value"));
+var exposureValue = /** @type {HTMLSpanElement} */ (
+    document.getElementById("exposure-value")
+);
 exposure.addEventListener("input", function () {
     exposureValue.textContent = parseFloat(exposure.value).toFixed(2);
 });
 
-var gammaValue = /** @type {HTMLSpanElement} */ (document.getElementById("gamma-value"));
+var gammaValue = /** @type {HTMLSpanElement} */ (
+    document.getElementById("gamma-value")
+);
 gamma.addEventListener("input", function () {
     gammaValue.textContent = parseFloat(gamma.value).toFixed(2);
 });
@@ -266,7 +289,11 @@ async function main() {
     }
     device = await adapter.requestDevice();
 
-    const charMapSize = charMap.width * charMap.height * charMap.chars.length * Float32Array.BYTES_PER_ELEMENT;
+    const charMapSize =
+        charMap.width *
+        charMap.height *
+        charMap.chars.length *
+        Float32Array.BYTES_PER_ELEMENT;
     charMapBuffer = device.createBuffer({
         size: charMapSize,
         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
@@ -274,7 +301,10 @@ async function main() {
     });
     const charMapBufferArray = new Float32Array(charMapBuffer.getMappedRange());
     for (let i = 0; i < charMap.chars.length; i++) {
-        charMapBufferArray.set(charMap.chars[i].pixels, i * charMap.width * charMap.height);
+        charMapBufferArray.set(
+            charMap.chars[i].pixels,
+            i * charMap.width * charMap.height
+        );
     }
     charMapBuffer.unmap();
 

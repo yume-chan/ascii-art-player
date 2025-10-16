@@ -15,7 +15,9 @@ struct Uniforms {
 @group(0) @binding(4) var video_sampler: sampler;
 
 fn to_grayscale(color: vec4<f32>) -> f32 {
-    return clamp(((color.r + color.g * 2.0 + color.b) / 4.0) * uniforms.gamma + uniforms.exposure, 0.0, 1.0);
+    // let value = ((color.r + color.g * 2.0 + color.b) / 4.0);
+    let value = 0.299 * color.r + 0.578 * color.g + 0.114 * color.b;
+    return 1.0 - clamp(value * uniforms.gamma + uniforms.exposure, 0.0, 1.0);
 }
 
 @compute @workgroup_size(8, 8)
